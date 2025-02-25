@@ -49,7 +49,7 @@ app.post('/register', async (req, res) => {
             lastName,
             email,
             phone,
-            password: pasword,
+            password,
         });
 
         // If referrerId exists, set the referrer for the new user and update the referrer's referral count and balance
