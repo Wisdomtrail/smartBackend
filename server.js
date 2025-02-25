@@ -19,7 +19,6 @@ mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log('MongoDB connection error: ', err));
 
-// Define User Schema with the new fields
 const userSchema = new mongoose.Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
@@ -33,8 +32,6 @@ const userSchema = new mongoose.Schema({
 // Create User Model
 const User = mongoose.model('User', userSchema);
 
-
-// API to register a user (check if referred)
 app.post('/register', async (req, res) => {
     const { firstName, lastName, email, phone, password, referrerId } = req.body;
 
@@ -45,16 +42,17 @@ app.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'User with this email or phone already exists' });
         }
 
+
         // Create a new user
         const newUser = new User({
             firstName,
             lastName,
             email,
             phone,
-            password,
+            password: pasword,
         });
 
-        // If referrerId exists, set the referrer for the new user and update the referrer’s referral count and balance
+        // If referrerId exists, set the referrer for the new user and update the referrer's referral count and balance
         if (referrerId) {
             const referrer = await User.findById(referrerId);
             if (!referrer) {
@@ -62,8 +60,7 @@ app.post('/register', async (req, res) => {
             }
 
             newUser.referredBy = referrer._id;
-            referrer.referrals += 1;  // Increment referral count of the referrer
-            referrer.balance += 1000;  // Add a bonus to the referrer's balance
+            referrer.referralsCount += 1;  // Increment referral count of the referrer
             await referrer.save();
         }
 
@@ -76,36 +73,20 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// API to track referral and update the referrer
-app.post('/api/referral', async (req, res) => {
-    const { userId, referrerId } = req.body;
 
+// API to delete all users
+app.delete('/delete-all-users', async (req, res) => {
     try {
-        // Find the referred user by userId
-        const user = await User.findById(userId);
-
-        // Check if the user is already referred
-        if (user.referredBy) {
-            return res.status(400).json({ message: 'User already referred.' });
+        // Delete all users in the database
+        const result = await User.deleteMany({});
+        if (result.deletedCount > 0) {
+            res.status(200).json({ message: `${result.deletedCount} users deleted successfully` });
+        } else {
+            res.status(404).json({ message: 'No users found to delete' });
         }
-
-        const referrer = await User.findById(referrerId);
-        if (!referrer) {
-            return res.status(400).json({ message: 'Referrer not found.' });
-        }
-
-        // Set the referrer for the referred user
-        user.referredBy = referrer._id;
-        referrer.referrals += 1;  // Increment referrer’s referral count
-        referrer.balance += 1000;  // Add bonus to referrer's balance
-
-        // Save the user and referrer data to the database
-        await user.save();
-        await referrer.save();
-
-        res.status(200).json({ message: 'Referral tracked successfully!' });
     } catch (error) {
-        res.status(500).json({ message: 'Error tracking referral', error: error.message });
+        console.error('Error deleting users:', error);
+        res.status(500).json({ message: 'Error deleting users' });
     }
 });
 
